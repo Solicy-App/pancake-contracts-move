@@ -1,4 +1,6 @@
-module pancake::TestCoinsV1 {
+
+
+module TestCoin::TestCoinsV1 {
     use std::signer;
     use std::string::utf8;
 

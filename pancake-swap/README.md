@@ -67,15 +67,56 @@ AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir 
 AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "72421d32d77f1877ded478e96f5b95914de1df91" }
 [addresses]
 pancake = "71e609393d30dfacaf477c9a9cd7824ae14b5f8d2a20c0b1917325d41e4a4aac" //repalce this with your_resource_account 
-dev = "2e5cc2bff22d15be32613aace67b7386251b8ae808a99241ee34b4703f780e2c" // repalce this with your_original_account which you created the resource account 
+dev = "2b627a16b744c004fee98620f99479f6446494cebd57d2a523e2e6cdb3ee8dc5" // repalce this with your_original_account which you created the resource account 
 zero = "0000000000000000000000000000000000000000000000000000000000000000"
-default_admin = "0000000000000000000000000000000000000000000000000000000000000000" // need to create an admin account, and replace this.
+default_admin = "2b627a16b744c004fee98620f99479f6446494cebd57d2a523e2e6cdb3ee8dc5" // need to create an admin account, and replace this.
 ``` 
 7. Compile code
 ```shell
-$ aptos move compile
+$ aptos move compile --package-dir .\TestCoin\
 ```
 8. Publish package
 ```shell
-$ aptos move publish
+$ aptos move publish --package-dir .\TestCoin\
+```
+
+9. Change account back to original in config.yaml
+
+10. Set the `TestCoin` address value to the original account in `./TestCoin/Move.toml`. And publish the TestCoin module
+```shell
+$ aptos move publish --package-dir .\TestCoin\
+```
+
+11. At this point you should be able to see the modules in `pancake-swap` package under resource account, and `TestCoin` module under original account in the block explorer or CLI (as shown in the step 6).
+
+### Testing
+
+12. Initialize `TestCoinsV1`:
+```shell
+$ aptos move run --function-id original_account_hex::TestCoinsV1::initialize
+```
+
+13. Mint test USDT (I tested with original_account, but you can mint tokens to any account):
+```shell
+$ aptos move run --function-id original_account_hex::TestCoinsV1::mint_coin --args address:original_account_hex u64:20000000000000000 --type-args original_account_hex::TestCoinsV1::USDT
+```
+
+14. Mint test BTC (I tested with original_account, but you can mint tokens to any account):
+```shell
+$ aptos move run --function-id original_account_hex::TestCoinsV1::mint_coin --args address:original_account_hex u64:20000000000000000 --type-args original_account_hex::TestCoinsV1::BTC
+```
+
+15. Create swap pair.
+```shell
+$ aptos move run --function-id resource_account_hex::router::create_pair --type-args original_account_hex::TestCoinsV1::BTC original_account_hex::TestCoinsV1::USDT
+```
+
+16. Add liquidity to the pair created.
+```shell
+$ aptos move run --function-id resource_account_hex::router::add_liquidity --args u64:10000 u64:5000 u64:5000 u64:2500 --type-args original_account_hex::TestCoinsV1::BTC original_account_hex::TestCoinsV1::USDT
+```
+
+17. Try to swap max 10000 BTC for 100 ETH. (If will need more BTC the transaction reverts)
+```shell
+$ aptos move run --function-id resource_account_hex::router::swap_exact_output --args u64:100 u64:10000 --type-args original_account_hex::TestCoinsV1::BTC original_account_hex::TestCoinsV1::USDT
 ```
