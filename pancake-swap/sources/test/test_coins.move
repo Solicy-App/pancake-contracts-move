@@ -1,51 +1,59 @@
-module pancake::TestCoinsV1 {
+#[test_only]
+module test_coin::test_coins {
+    use aptos_framework::account;
+    use aptos_framework::managed_coin;
     use std::signer;
-    use std::string::utf8;
 
-    use aptos_framework::coin::{Self, MintCapability, FreezeCapability, BurnCapability};
+    struct TestCAKE {}
+    struct TestBUSD {}
+    struct TestUSDC {}
+    struct TestBNB {}
 
-    /// Represents test USDT coin.
-    struct USDT {}
+    public entry fun init_coins(): signer {
+        let account = account::create_account_for_test(@test_coin);
 
-    /// Represents test BTC coin.
-    struct BTC {}
+        // init coins
+        managed_coin::initialize<TestCAKE>(
+            &account,
+            b"Cake",
+            b"CAKE",
+            9,
+            false,
+        );
+        managed_coin::initialize<TestBUSD>(
+            &account,
+            b"Busd",
+            b"BUSD",
+            9,
+            false,
+        );
 
-    /// Storing mint/burn capabilities for `USDT` and `BTC` coins under user account.
-    struct Caps<phantom CoinType> has key {
-        mint: MintCapability<CoinType>,
-        freeze: FreezeCapability<CoinType>,
-        burn: BurnCapability<CoinType>,
+        managed_coin::initialize<TestUSDC>(
+            &account,
+            b"USDC",
+            b"USDC",
+            9,
+            false,
+        );
+
+        managed_coin::initialize<TestBNB>(
+            &account,
+            b"BNB",
+            b"BNB",
+            9,
+            false,
+        );
+
+        account
     }
 
-    /// Initializes `BTC` and `USDT` coins.
-    public entry fun initialize(admin: &signer) {
-        let (btc_b, btc_f, btc_m) =
-            coin::initialize<BTC>(admin,
-                utf8(b"Bitcoin"), utf8(b"BTC"), 8, true);
-        let (usdt_b, usdt_f, usdt_m) =
-            coin::initialize<USDT>(admin,
-                utf8(b"Tether"), utf8(b"USDT"), 8, true);
-        move_to(admin, Caps<BTC> { mint: btc_m, freeze: btc_f, burn: btc_b });
-        move_to(admin, Caps<USDT> { mint: usdt_m, freeze: usdt_f, burn: usdt_b });
-        register_coins_all(admin);
+
+    public entry fun register_and_mint<CoinType>(account: &signer, to: &signer, amount: u64) {
+      managed_coin::register<CoinType>(to);
+      managed_coin::mint<CoinType>(account, signer::address_of(to), amount)
     }
 
-    // only resource_account should call this
-    public entry fun register_coins_all(account: &signer) {
-        let account_addr = signer::address_of(account);
-        if (!coin::is_account_registered<BTC>(account_addr)) {
-            coin::register<BTC>(account);
-        };
-        if (!coin::is_account_registered<USDT>(account_addr)) {
-            coin::register<USDT>(account);
-        };
-    }
-
-    // Mints new coin `CoinType` on account `acc_addr`.
-    public entry fun mint_coin<CoinType>(admin: &signer, acc_addr: address, amount: u64) acquires Caps {
-        let admin_addr = signer::address_of(admin);
-        let caps = borrow_global<Caps<CoinType>>(admin_addr);
-        let coins = coin::mint<CoinType>(amount, &caps.mint);
-        coin::deposit(acc_addr, coins);
+    public entry fun mint<CoinType>(account: &signer, to: &signer, amount: u64) {
+        managed_coin::mint<CoinType>(account, signer::address_of(to), amount)
     }
 }
